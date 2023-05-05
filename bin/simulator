@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+require('dotenv').config();
+
+const { GOOGLE_CLOUD_PROJECT, TOPIC } = process.env;
+
+const { PubSub } = require('@google-cloud/pubsub');
+
+const client = new PubSub({ projectId: GOOGLE_CLOUD_PROJECT });
+
+async function publishMessage(topic, data) {
+  const buff = Buffer.from(JSON.stringify(data));
+  try {
+    const messageId = await client.topic(topic).publishMessage({ data: buff });
+    console.log(`Message Id: ${messageId}`);
+  } catch (error) {
+    console.error(`error while publishing: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+function randomNumber(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function main() {
+  publishMessage(TOPIC, {
+    'device': 'freeze-1',
+    'type': 'freezer',
+    'temp': 2.02,
+  }).catch(err => {
+    console.error(err.message);
+    process.exitCode = 1;
+  });
+}
+
+main();
