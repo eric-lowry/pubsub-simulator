@@ -11,7 +11,7 @@ async function publishMessage(topic, data) {
   const buff = Buffer.from(JSON.stringify(data));
   try {
     const messageId = await client.topic(topic).publishMessage({ data: buff });
-    console.log(`Message Id: ${messageId}`);
+    //console.log(`Message Id: ${messageId}`);
   } catch (error) {
     console.error(`error while publishing: ${error.message}`);
     process.exitCode = 1;
@@ -22,15 +22,79 @@ function randomNumber(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-function main() {
-  publishMessage(TOPIC, {
-    'device': 'freeze-1',
-    'type': 'freezer',
-    'temp': 2.02,
+function publishDevice(d) {
+  return publishMessage(TOPIC, {
+    'device': d.device,
+    'type': d.type,
+    'temp': d.temp.toFixed(2),
+    'pump': d.pump ? 1 : 0,
   }).catch(err => {
     console.error(err.message);
     process.exitCode = 1;
   });
+}
+
+const devices = [
+  {
+    device: 'freeze-1',
+    type: 'freezer',
+    minTemp: -21,
+    maxTemp: -18,
+    minDelta: 0,
+    maxDelta: 1,
+  },
+  {
+    device: 'freeze-2',
+    type: 'freezer',
+    minTemp: -21,
+    maxTemp: -10,
+    minDelta: 0,
+    maxDelta: 1,
+  },
+  {
+    device: 'chill-1',
+    type: 'chiller',
+    minTemp: 3,
+    maxTemp: 5,
+    minDelta: 0,
+    maxDelta: 1,
+  },
+  {
+    device: 'chill-2',
+    type: 'chiller',
+    minTemp: 3,
+    maxTemp: 5,
+    minDelta: 0,
+    maxDelta: 1,
+  },
+];
+
+async function main() {
+  // set initial temp
+  for (let i = 0; i < devices.length; i++) {
+    d = devices[i];
+    d.temp = randomNumber(d.minTemp, d.maxTemp);
+    d.pump = Math.random() > 0.5 ? true : false;
+    await publishDevice(d);
+  }
+  console.log('.')
+
+  setInterval(async () => {
+    for (let i = 0; i < devices.length; i++) {
+      d = devices[i];
+      if (d.pump) {
+        // cooling
+        d.temp -= randomNumber(d.minDelta, d.maxDelta);
+        if (d.temp < d.minTemp) d.pump = false;
+      } else {
+        // warming
+        d.temp += randomNumber(d.minDelta, d.maxDelta);
+        if (d.temp > d.maxTemp) d.pump = true;
+      }
+      await publishDevice(d);
+    }
+    console.log('.')
+  }, 10 * 1000); // every 10s
 }
 
 main();
