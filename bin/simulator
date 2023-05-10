@@ -26,7 +26,7 @@ function publishDevice(d) {
   return publishMessage(TOPIC, {
     'device': d.device,
     'type': d.type,
-    'temp': d.temp.toFixed(2),
+    'temp': Number(d.temp.toFixed(2)),
     'pump': d.pump ? 1 : 0,
   }).catch(err => {
     console.error(err.message);
